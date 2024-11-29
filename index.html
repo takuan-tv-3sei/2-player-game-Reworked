@@ -1,0 +1,250 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>二人対戦ゲーム</title>
+    <style>
+        canvas {
+            background: white;
+            display: block;
+            margin: auto;
+            border: 1px solid black;
+        }
+    </style>
+</head>
+<body>
+<canvas id="gameCanvas" width="800" height="600"></canvas>
+
+<script>
+    const canvas = document.getElementById("gameCanvas");
+    const ctx = canvas.getContext("2d");
+
+    // プレイヤーの設定
+    const players = [
+        { 
+            x: 100, 
+            y: 300, 
+            width: 40, 
+            height: 40, 
+            color: "black", 
+            speed: 5, 
+            bullets: [], 
+            health: 100, 
+            keys: { up: "w", down: "s", left: "a", right: "d", shoot: "e" }, 
+            direction: "right", 
+            bulletSpeed: 40,   // プレイヤー1の弾の速度
+            shootInterval: 5,  // プレイヤー1の発射間隔（ミリ秒）
+            lastShot: 0 
+        },
+        { 
+            x: 700, 
+            y: 300, 
+            width: 40, 
+            height: 40, 
+            color: "red", 
+            speed: 5, 
+            bullets: [], 
+            health: 100, 
+            keys: { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight", shoot: "l" }, 
+            direction: "left", 
+            bulletSpeed: 5,   // プレイヤー2の弾の速度
+            shootInterval: 1000,  // プレイヤー2の発射間隔（ミリ秒）
+            lastShot: 0 
+        }
+    ];
+
+    const bulletSize = 10;
+    const bulletDamage = 10;
+    const keys = {};
+    let winner = null; // 勝者を記録
+
+    // 障害物の設定
+    const obstacleCount = Math.floor(Math.random() * 6) + 2;
+    const obstacles = [];
+
+    // キーイベントのリスナー
+    document.addEventListener("keydown", (e) => { keys[e.key] = true; });
+    document.addEventListener("keyup", (e) => { keys[e.key] = false; });
+
+    // プレイヤーを描画
+    function drawPlayers() {
+        players.forEach(player => {
+            ctx.fillStyle = player.color;
+            ctx.fillRect(player.x, player.y, player.width, player.height);
+        });
+    }
+
+    // 障害物を描画
+    function drawObstacles() {
+        obstacles.forEach(obstacle => {
+            ctx.fillStyle = obstacle.color;
+            ctx.fillRect(obstacle.x, obstacle.y, obstacle.width, obstacle.height);
+        });
+    }
+
+    // 障害物の生成
+    function generateObstacles() {
+        for (let i = 0; i < obstacleCount; i++) {
+            let obstacle;
+            let isOverlapping;
+
+            do {
+                // ランダムな障害物を生成
+                obstacle = {
+                    x: Math.random() * (canvas.width - 20),
+                    y: Math.random() * (canvas.height - 150),
+                    width: 20,
+                    height: Math.random() * 200 + 50,
+                    color: "yellow" // 障害物の色を黄色に変更
+                };
+
+                // プレイヤーと重なっていないか確認
+                isOverlapping = players.some(player => isColliding(obstacle, player));
+            } while (isOverlapping);
+
+            obstacles.push(obstacle);
+        }
+    }
+
+    // 衝突判定
+    function isColliding(rect1, rect2) {
+        return rect1.x < rect2.x + rect2.width &&
+               rect1.x + rect1.width > rect2.x &&
+               rect1.y < rect2.y + rect2.height &&
+               rect1.y + rect1.height > rect2.y;
+    }
+
+    // 弾を描画
+    function drawBullets() {
+        players.forEach(player => {
+            ctx.fillStyle = player.color;
+            player.bullets.forEach((bullet, index) => {
+                // 弾を移動
+                bullet.x += bullet.dx * player.bulletSpeed;
+                bullet.y += bullet.dy * player.bulletSpeed;
+
+                // 弾が画面外に出たら削除
+                if (bullet.x < 0 || bullet.x > canvas.width || bullet.y < 0 || bullet.y > canvas.height) {
+                    player.bullets.splice(index, 1);
+                }
+
+                // 弾の描画
+                ctx.fillRect(bullet.x, bullet.y, bulletSize, bulletSize);
+
+                // 他のプレイヤーへの衝突判定
+                players.forEach(target => {
+                    if (target !== player &&
+                        bullet.x < target.x + target.width &&
+                        bullet.x + bulletSize > target.x &&
+                        bullet.y < target.y + target.height &&
+                        bullet.y + bulletSize > target.y) {
+
+                        // 弾のダメージ処理
+                        target.health -= bulletDamage;
+                        player.bullets.splice(index, 1);
+
+                        // 勝敗判定
+                        if (target.health <= 0 && winner === null) {
+                            winner = player.color; // 勝者を設定
+                        }
+                    }
+                });
+
+                // 障害物との衝突判定
+                obstacles.forEach((obstacle, obstacleIndex) => {
+                    if (bullet.x < obstacle.x + obstacle.width &&
+                        bullet.x + bulletSize > obstacle.x &&
+                        bullet.y < obstacle.y + obstacle.height &&
+                        bullet.y + bulletSize > obstacle.y) {
+                        // 弾が障害物に当たった場合、弾を削除
+                        player.bullets.splice(index, 1);
+                    }
+                });
+            });
+        });
+    }
+
+    // プレイヤーの動き
+    function movePlayers() {
+        players.forEach(player => {
+            let moveX = 0;
+            let moveY = 0;
+
+            // 移動方向の設定
+            if (keys[player.keys.up]) moveY = -player.speed;
+            if (keys[player.keys.down]) moveY = player.speed;
+            if (keys[player.keys.left]) moveX = -player.speed;
+            if (keys[player.keys.right]) moveX = player.speed;
+
+            // 新しい位置を計算
+            const newX = player.x + moveX;
+            const newY = player.y + moveY;
+
+            // 衝突判定: 移動後に障害物に当たるか確認
+            const newPlayer = { ...player, x: newX, y: newY };
+            const isCollidingWithObstacle = obstacles.some(obstacle => isColliding(newPlayer, obstacle));
+
+            // プレイヤーが壁にぶつからないように制限
+            if (newX >= 0 && newX + player.width <= canvas.width && !isCollidingWithObstacle) {
+                player.x = newX;
+            }
+            if (newY >= 0 && newY + player.height <= canvas.height && !isCollidingWithObstacle) {
+                player.y = newY;
+            }
+
+            // プレイヤーの向き変更
+            if (keys[player.keys.left]) {
+                player.direction = "left";
+            } else if (keys[player.keys.right]) {
+                player.direction = "right";
+            }
+
+            // 弾の発射
+            if (keys[player.keys.shoot]) {
+                const currentTime = Date.now();
+                if (currentTime - player.lastShot > player.shootInterval) {
+                    const dx = player.direction === "left" ? -1 : 1;
+                    const dy = 0;
+                    player.bullets.push({
+                        x: player.x + player.width / 2 - bulletSize / 2,
+                        y: player.y + player.height / 2 - bulletSize / 2,
+                        dx: dx,
+                        dy: dy
+                    });
+                    player.lastShot = currentTime;
+                }
+            }
+        });
+    }
+
+    // スコアと体力の描画
+    function drawHUD() {
+        ctx.fillStyle = "black";
+        ctx.font = "20px Arial";
+        ctx.fillText(`Player 1 Health: ${players[0].health}`, 20, 30);
+        ctx.fillText(`Player 2 Health: ${players[1].health}`, canvas.width - 200, 30);
+
+        // 勝者表示
+        if (winner) {
+            ctx.fillText(`${winner} wins!`, canvas.width / 2 - 50, canvas.height / 2);
+        }
+    }
+
+    // ゲームループ
+    function gameLoop() {
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        movePlayers();
+        drawPlayers();
+        drawObstacles();
+        drawBullets();
+        drawHUD();
+        requestAnimationFrame(gameLoop);
+    }
+
+    // ゲーム開始
+    generateObstacles();
+    gameLoop();
+</script>
+</body>
+</html>
