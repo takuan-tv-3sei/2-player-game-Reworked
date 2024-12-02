@@ -217,27 +217,23 @@
             }
 
             if (keys[player.keys.sandan]) {
-                player.bullets.push({
-                    x: player.x + player.width / 2 - bulletSize / 2,
-                    y: player.y + player.height / 2 - bulletSize / 2,
-                    dx: player.direction === "left" ? -1 : 1,
-                    dy: -0.5
-                });
+    const bulletCount = 36; // 弾の数（360度を等分）
+    const angleIncrement = (2 * Math.PI) / bulletCount; // 弾ごとの角度増加量
 
-                player.bullets.push({
-                    x: player.x + player.width / 2 - bulletSize / 2,
-                    y: player.y + player.height / 2 - bulletSize / 2,
-                    dx: player.direction === "left" ? -1 : 1,
-                    dy: 0
-                });
+    for (let i = 0; i < bulletCount; i++) {
+        const angle = i * angleIncrement; // 弾の角度
+        const dx = Math.cos(angle); // x方向の速度
+        const dy = Math.sin(angle); // y方向の速度
 
-                player.bullets.push({
-                    x: player.x + player.width / 2 - bulletSize / 2,
-                    y: player.y + player.height / 2 - bulletSize / 2,
-                    dx: player.direction === "left" ? -1 : 1,
-                    dy: 0.5
-                });
-            }
+        player.bullets.push({
+            x: player.x + player.width / 2 - bulletSize / 2,
+            y: player.y + player.height / 2 - bulletSize / 2,
+            dx: dx,
+            dy: dy
+        });
+    }
+}
+
         });
     }
 
