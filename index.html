@@ -46,7 +46,7 @@
             speed: 5, 
             bullets: [], 
             health: 100, 
-            keys: { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight", shoot: "l" }, 
+            keys: { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight", shoot: "l", sandan: "k"}, 
             direction: "left", 
             bulletSpeed: 5,   // プレイヤー2の弾の速度
             shootInterval: 1000,  // プレイヤー2の発射間隔（ミリ秒）
@@ -214,6 +214,29 @@
                     });
                     player.lastShot = currentTime;
                 }
+            }
+
+            if (keys[player.keys.sandan]) {
+                player.bullets.push({
+                    x: player.x + player.width / 2 - bulletSize / 2,
+                    y: player.y + player.height / 2 - bulletSize / 2,
+                    dx: player.direction === "left" ? -1 : 1,
+                    dy: -0.5
+                });
+
+                player.bullets.push({
+                    x: player.x + player.width / 2 - bulletSize / 2,
+                    y: player.y + player.height / 2 - bulletSize / 2,
+                    dx: player.direction === "left" ? -1 : 1,
+                    dy: 0
+                });
+
+                player.bullets.push({
+                    x: player.x + player.width / 2 - bulletSize / 2,
+                    y: player.y + player.height / 2 - bulletSize / 2,
+                    dx: player.direction === "left" ? -1 : 1,
+                    dy: 0.5
+                });
             }
         });
     }
