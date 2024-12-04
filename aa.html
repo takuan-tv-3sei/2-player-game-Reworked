@@ -14,7 +14,7 @@
     </style>
 </head>
 <body>
-<canvas id="gameCanvas" width="800" height="600"></canvas>
+<canvas id="gameCanvas" width="1600" height="1600"></canvas>
 
 <script>
     const canvas = document.getElementById("gameCanvas");
@@ -30,25 +30,25 @@
             color: "black", 
             speed: 5, 
             bullets: [], 
-            health: 100000, 
-            keys: { up: "w", down: "s", left: "a", right: "d", shoot: "e" }, 
+            health: 100, 
+            keys: { up: "w", down: "s", left: "a", right: "d", shoot: "e", homing: "q"}, 
             direction: "right", 
             bulletSpeed: 25,   // プレイヤー1の弾の速度
-            shootInterval: 10,  // プレイヤー1の発射間隔（ミリ秒）
+            shootInterval: 1,  // プレイヤー1の発射間隔（ミリ秒）
             lastShot: 0 
         },
         { 
-            x: 700, 
-            y: 300, 
+            x: 1500, 
+            y: 1500, 
             width: 40, 
             height: 40, 
             color: "red", 
-            speed: 5, 
+            speed: 500, 
             bullets: [], 
-            health: 10000, 
+            health: 100, 
             keys: { up: "ArrowUp", down: "ArrowDown", left: "ArrowLeft", right: "ArrowRight", shoot: "l", sandan: "k"}, 
             direction: "left", 
-            bulletSpeed: 100,   // プレイヤー2の弾の速度
+            bulletSpeed: 25,   // プレイヤー2の弾の速度
             shootInterval: 1000,  // プレイヤー2の発射間隔（ミリ秒）
             lastShot: 0 
         }
@@ -60,7 +60,7 @@
     let winner = null; // 勝者を記録
 
     // 障害物の設定
-    const obstacleCount = Math.floor(Math.random() * 40) + 2;
+    const obstacleCount = Math.floor(Math.random() * 1) + 2;
     const obstacles = [];
 
     // キーイベントのリスナー
@@ -121,6 +121,18 @@
             ctx.fillStyle = player.color;
             player.bullets.forEach((bullet, index) => {
                 // 弾を移動
+                if (bullet.homing) {
+        // ターゲットの現在位置を追尾するように調整
+        const target = bullet.target;
+        const dx = target.x + target.width / 2 - bullet.x;
+        const dy = target.y + target.height / 2 - bullet.y;
+        const magnitude = Math.sqrt(dx ** 2 + dy ** 2);
+
+        // 弾の速度を更新
+        bullet.dx = dx / magnitude;
+        bullet.dy = dy / magnitude;
+    }
+
                 bullet.x += bullet.dx * player.bulletSpeed;
                 bullet.y += bullet.dy * player.bulletSpeed;
 
@@ -142,6 +154,8 @@
 
                         // 弾のダメージ処理
                         target.health -= bulletDamage;
+                        
+                        
                         player.bullets.splice(index, 1);
 
                         // 勝敗判定
@@ -152,16 +166,25 @@
                 });
 
                 // 障害物との衝突判定
-                /*
+                
                 obstacles.forEach((obstacle, obstacleIndex) => {
-                    if (bullet.x < obstacle.x + obstacle.width &&
+                    if (!bullet.homing)
+                {
+if (bullet.x < obstacle.x + obstacle.width &&
                         bullet.x + bulletSize > obstacle.x &&
                         bullet.y < obstacle.y + obstacle.height &&
                         bullet.y + bulletSize > obstacle.y) {
+                            console.log(bullet.attacker)
+                            if (bullet.attacker.color != "black" || bullet.homing == undefined)
                         // 弾が障害物に当たった場合、弾を削除
+                    {
                         player.bullets.splice(index, 1);
                     }
-                });*/
+                        
+                    }
+                }
+                     
+                });
             });
         });
     }
@@ -211,11 +234,35 @@
                         x: player.x + player.width / 2 - bulletSize / 2,
                         y: player.y + player.height / 2 - bulletSize / 2,
                         dx: dx,
-                        dy: dy
+                        dy: dy,
+                        attacker: player
                     });
                     player.lastShot = currentTime;
                 }
             }
+
+            if (keys[player.keys.homing]) {
+    const currentTime = Date.now();
+    if (currentTime - player.lastShot > player.shootInterval) {
+        // プレイヤー2の位置をターゲットとして取得
+        const target = players[1];
+        const dx = target.x + target.width / 2 - (player.x + player.width / 2);
+        const dy = target.y + target.height / 2 - (player.y + player.height / 2);
+        const magnitude = Math.sqrt(dx ** 2 + dy ** 2); // ベクトルの大きさ
+
+        // 正規化して追尾弾の方向を設定
+        player.bullets.push({
+            x: player.x + player.width / 2 - bulletSize / 2,
+            y: player.y + player.height / 2 - bulletSize / 2,
+            dx: dx / magnitude, // x方向の速度
+            dy: dy / magnitude, // y方向の速度
+            homing: true, // 追尾弾フラグ
+            target: target // ターゲット情報
+        });
+        player.lastShot = currentTime;
+    }
+}
+
 
             if (keys[player.keys.sandan]) {
                 const currentTime = Date.now();
@@ -223,20 +270,22 @@
     const angleIncrement = (2 * Math.PI) / bulletCount; // 弾ごとの角度増加量
 
     if (currentTime - player.lastShot > player.shootInterval) {  
-    for (let i = 0; i < bulletCount; i++) {
-        const angle = i * angleIncrement; // 弾の角度
-        const dx = Math.cos(angle); // x方向の速度
-        const dy = Math.sin(angle); // y方向の速度
+        for (let i = 0; i < bulletCount; i++) {
+            const angle = i * angleIncrement; // 弾の角度
+            const dx = Math.cos(angle); // x方向の速度
+            const dy = Math.sin(angle); // y方向の速度
 
-        player.bullets.push({
-            x: player.x + player.width / 2 - bulletSize / 2,
-            y: player.y + player.height / 2 - bulletSize / 2,
-            dx: dx,
-            dy: dy
-        });
+            player.bullets.push({
+                x: player.x + player.width / 2 - bulletSize / 2,
+                y: player.y + player.height / 2 - bulletSize / 2,
+                dx: dx,
+                dy: dy,
+                attacker: "player1"
+            });
+        }
+        player.lastShot = 0
     }
-    player.lastShot = 0}
-}
+    }
 
         });
     }
